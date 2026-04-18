@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoboScript AI - Asisten Roblox Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#080812;--bg2:#0e0e1f;--bg3:#13132a;
+  --border:#1e1e3f;--border2:#2a2a5a;
+  --purple:#7c3aed;--purple2:#5b21b6;--blue:#3b82f6;
+  --text:#e0e0ff;--muted:#6b7280;--accent:#a5b4fc;
+  --green:#4ade80;--sidebar-bg:#0c0c1e;--sidebar-icon:#5a5a7a;
+}
+body.light{
+  --bg:#f4f4f8;--bg2:#ffffff;--bg3:#eaeaf2;
+  --border:#dddde8;--border2:#c8c8dc;
+  --text:#1a1a2e;--muted:#888899;--accent:#5b21b6;
+  --sidebar-bg:#e8e8f0;--sidebar-icon:#8888aa;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden;transition:background .3s,color .3s;}
+body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(circle at 25% 25%,rgba(124,58,237,.05) 0%,transparent 50%),radial-gradient(circle at 75% 75%,rgba(59,130,246,.05) 0%,transparent 50%);pointer-events:none;z-index:0;}
+
+/* SIDEBAR */
+.sidebar{width:48px;background:var(--sidebar-bg);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:2px;flex-shrink:0;position:relative;z-index:20;transition:background .3s;}
+.s-icon{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;color:var(--sidebar-icon);transition:all .15s;position:relative;}
+.s-icon:hover,.s-icon.active{background:rgba(124,58,237,.15);color:var(--accent);}
+.s-icon svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+.s-tooltip{position:absolute;left:46px;top:50%;transform:translateY(-50%);background:var(--bg2);border:1px solid var(--border2);color:var(--text);font-size:11px;padding:4px 9px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:50;}
+.s-icon:hover .s-tooltip{opacity:1;}
+.s-divider{width:26px;height:1px;background:var(--border);margin:5px 0;}
+.s-spacer{flex:1;}
+
+/* PANEL */
+.panel{width:0;overflow:hidden;background:var(--bg2);border-right:0px solid var(--border);transition:width .25s ease,border-width .25s;flex-shrink:0;display:flex;flex-direction:column;position:relative;z-index:15;}
+.panel.open{width:240px;border-right-width:1px;}
+.panel-header{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0;}
+.panel-title{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+.panel-close{cursor:pointer;color:var(--muted);font-size:16px;padding:2px 5px;border-radius:4px;}
+.panel-close:hover{color:var(--text);background:var(--bg3);}
+.panel-body{flex:1;overflow-y:auto;padding:12px;}
+.panel-body::-webkit-scrollbar{width:3px;}
+.panel-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+
+.tool-item{background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:all .15s;}
+.tool-item:hover{border-color:var(--purple);background:rgba(124,58,237,.07);}
+.tool-item-name{font-size:12px;font-weight:500;color:var(--accent);margin-bottom:3px;}
+.tool-item-desc{font-size:11px;color:var(--muted);}
+
+.hist-item{padding:9px 10px;border-radius:8px;margin-bottom:6px;border:1px solid transparent;transition:all .15s;}
+.hist-item:hover{background:var(--bg3);border-color:var(--border);}
+.hist-label{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hist-time{font-size:10px;color:var(--muted);margin-top:2px;}
+.hist-empty{font-size:12px;color:var(--muted);text-align:center;margin-top:30px;}
+
+.search-input-wrap{display:flex;align-items:center;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:0 10px;margin-bottom:10px;}
+.search-input-wrap svg{width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.6;stroke-linecap:round;flex-shrink:0;}
+.search-input{background:transparent;border:none;outline:none;color:var(--text);font-size:13px;padding:8px;width:100%;font-family:'DM Sans',sans-serif;}
+.search-input::placeholder{color:var(--muted);}
+.search-result{padding:8px 10px;border-radius:8px;border:1px solid transparent;margin-bottom:5px;}
+.search-result:hover{background:var(--bg3);border-color:var(--border);}
+.search-result-role{font-size:10px;color:var(--purple);text-transform:uppercase;font-family:'Space Mono',monospace;margin-bottom:2px;}
+.search-result-text{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.search-empty{font-size:12px;color:var(--muted);text-align:center;margin-top:30px;}
+
+.setting-row{margin-bottom:16px;}
+.setting-label{font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;font-family:'Space Mono',monospace;letter-spacing:.8px;}
+.setting-btn{width:100%;background:linear-gradient(135deg,var(--purple),var(--blue));border:none;border-radius:8px;color:white;padding:9px;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:6px;transition:opacity .2s;}
+.setting-btn:hover{opacity:.85;}
+.setting-btn.danger{background:linear-gradient(135deg,#dc2626,#991b1b);}
+
+/* Crown */
+.crown-wrap{position:relative;}
+.crown-btn{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;font-size:19px;transition:all .2s;}
+.crown-btn:hover{background:rgba(124,58,237,.15);transform:scale(1.12);}
+.crown-popup{display:none;position:absolute;left:52px;bottom:0;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:18px;width:230px;z-index:100;box-shadow:0 8px 40px rgba(0,0,0,.7);}
+.crown-popup.show{display:block;animation:popIn .18s ease;}
+.crown-popup::before{content:'';position:absolute;left:-7px;bottom:14px;width:12px;height:12px;background:var(--bg2);border-left:1px solid var(--border2);border-bottom:1px solid var(--border2);transform:rotate(45deg);}
+@keyframes popIn{from{opacity:0;transform:translateX(-8px) scale(.95);}to{opacity:1;transform:none;}}
+.popup-label{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:14px;}
+.owner-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.o-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.o-avatar.claude{background:linear-gradient(135deg,#7c3aed,#3b82f6);box-shadow:0 0 10px rgba(124,58,237,.4);}
+.o-avatar.kitsune{background:linear-gradient(135deg,#f59e0b,#ef4444);box-shadow:0 0 10px rgba(245,158,11,.35);}
+.o-name{font-size:13px;font-weight:500;color:var(--text);}
+.o-role{font-size:11px;color:var(--muted);margin-top:1px;}
+.popup-div{height:1px;background:var(--border);margin:12px 0;}
+.yt-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:#ff0000;color:white;font-size:13px;font-weight:600;padding:9px 0;border-radius:10px;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all .2s;text-decoration:none;}
+.yt-btn:hover{background:#cc0000;transform:translateY(-1px);box-shadow:0 4px 16px rgba(255,0,0,.35);}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:1;}
+header{background:var(--bg2);padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);position:relative;transition:background .3s;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--purple),transparent);opacity:.5;}
+.logo{width:38px;height:38px;background:linear-gradient(135deg,var(--purple),var(--blue));border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;box-shadow:0 0 16px rgba(124,58,237,.35);flex-shrink:0;}
+.header-info h1{font-family:'Space Mono',monospace;font-size:16px;color:var(--accent);}
+.header-info p{font-size:11px;color:var(--muted);margin-top:1px;}
+.status-badge{margin-left:auto;display:flex;align-items:center;gap:6px;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);color:var(--green);font-size:11px;font-family:'Space Mono',monospace;padding:5px 12px;border-radius:20px;}
+.status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+#chat-area{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:18px;scroll-behavior:smooth;}
+#chat-area::-webkit-scrollbar{width:4px;}
+#chat-area::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+.msg{display:flex;gap:10px;max-width:88%;animation:fadeUp .3s ease;}
+.msg.user{align-self:flex-end;flex-direction:row-reverse;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:2px;}
+.msg.ai .avatar{background:linear-gradient(135deg,var(--purple),var(--blue));box-shadow:0 0 10px rgba(124,58,237,.3);}
+.msg.user .avatar{background:var(--bg3);border:1px solid var(--border2);}
+.bubble{padding:11px 15px;border-radius:16px;font-size:14px;line-height:1.7;}
+.msg.ai .bubble{background:var(--bg2);border:1px solid var(--border);border-radius:4px 16px 16px 16px;}
+.msg.user .bubble{background:linear-gradient(135deg,var(--purple),var(--purple2));color:white;border-radius:16px 4px 16px 16px;}
+.bubble pre{background:#050510;border:1px solid var(--border2);border-radius:9px;padding:12px;margin:8px 0;overflow-x:auto;font-size:12px;font-family:'Space Mono',monospace;color:#a5f3fc;line-height:1.6;position:relative;}
+.bubble pre::before{content:'lua';position:absolute;top:7px;right:9px;font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;text-transform:uppercase;}
+.copy-btn{position:absolute;top:6px;right:36px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.3);color:#a5b4fc;font-size:10px;padding:2px 7px;border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.copy-btn:hover{background:rgba(124,58,237,.4);}
+.bubble img.uploaded-img{max-width:200px;border-radius:8px;margin-top:6px;display:block;}
+
+.typing-indicator{display:flex;gap:5px;align-items:center;padding:4px 0;}
+.typing-indicator span{width:6px;height:6px;background:var(--purple);border-radius:50%;animation:bounce 1.3s infinite ease-in-out;}
+.typing-indicator span:nth-child(2){animation-delay:.2s;}
+.typing-indicator span:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.4;}40%{transform:translateY(-6px);opacity:1;}}
+
+.quick-btns{display:flex;flex-wrap:wrap;gap:7px;padding:2px 20px 10px;}
+.quick-btn{background:var(--bg2);border:1px solid var(--border2);color:var(--accent);padding:6px 13px;border-radius:20px;font-size:12px;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;}
+.quick-btn:hover{background:var(--bg3);border-color:var(--purple);color:var(--text);transform:translateY(-1px);}
+
+.input-area{padding:10px 20px 16px;background:var(--bg2);border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;transition:background .3s;}
+.img-preview-bar{display:none;align-items:center;gap:8px;padding:6px 2px;}
+.img-preview-bar.show{display:flex;}
+.img-thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;border:1px solid var(--border2);}
+.img-remove{background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.4);color:#f87171;font-size:11px;padding:3px 8px;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.input-row{display:flex;gap:8px;align-items:flex-end;}
+.input-wrap{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:13px;display:flex;align-items:flex-end;transition:border-color .2s;}
+.input-wrap:focus-within{border-color:var(--purple);}
+textarea{flex:1;background:transparent;border:none;outline:none;color:var(--text);padding:10px 13px;font-size:14px;resize:none;min-height:42px;max-height:120px;font-family:'DM Sans',sans-serif;line-height:1.5;}
+textarea::placeholder{color:var(--muted);}
+.upload-btn{width:38px;height:38px;background:transparent;border:none;cursor:pointer;color:var(--sidebar-icon);display:flex;align-items:center;justify-content:center;border-radius:8px;transition:all .15s;flex-shrink:0;margin-bottom:2px;}
+.upload-btn:hover{color:var(--accent);background:rgba(124,58,237,.1);}
+.upload-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+#send-btn{width:42px;height:42px;background:linear-gradient(135deg,var(--purple),var(--blue));border:none;border-radius:11px;cursor:pointer;color:white;font-size:17px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;box-shadow:0 0 14px rgba(124,58,237,.3);}
+#send-btn:hover{transform:scale(1.05);box-shadow:0 0 22px rgba(124,58,237,.5);}
+#send-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.confirm-bar{display:none;background:rgba(124,58,237,.12);border-top:1px solid rgba(124,58,237,.3);padding:8px 20px;align-items:center;gap:10px;font-size:13px;color:var(--accent);}
+.confirm-bar.show{display:flex;}
+.confirm-yes{background:var(--purple);color:white;border:none;border-radius:7px;padding:5px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.confirm-no{background:transparent;color:var(--muted);border:1px solid var(--border2);border-radius:7px;padding:5px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="s-icon" id="icon-theme" onclick="toggleTheme()">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    <span class="s-tooltip">Ganti Tema</span>
+  </div>
+  <div class="s-divider"></div>
+  <div class="s-icon" onclick="newChat()">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    <span class="s-tooltip">Chat Baru</span>
+  </div>
+  <div class="s-icon" id="icon-search" onclick="togglePanel('search')">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+    <span class="s-tooltip">Cari Chat</span>
+  </div>
+  <div class="s-icon" id="icon-toolbox" onclick="togglePanel('toolbox')">
+    <svg viewBox="0 0 24 24"><rect x="2" y="9" width="20" height="12" rx="2"/><path d="M8 9V7a4 4 0 0 1 8 0v2"/><line x1="12" y1="13" x2="12" y2="17"/></svg>
+    <span class="s-tooltip">Toolbox Lua</span>
+  </div>
+  <div class="s-icon" onclick="focusChat()">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <span class="s-tooltip">Fokus Input</span>
+  </div>
+  <div class="s-icon" id="icon-history" onclick="togglePanel('history')">
+    <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+    <span class="s-tooltip">Riwayat</span>
+  </div>
+  <div class="s-icon" id="icon-settings" onclick="togglePanel('settings')">
+    <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="7" cy="7" r="1.8"/><circle cx="17" cy="7" r="1.8"/><circle cx="7" cy="17" r="1.8"/><circle cx="17" cy="17" r="1.8"/></svg>
+    <span class="s-tooltip">Pengaturan</span>
+  </div>
+  <div class="s-spacer"></div>
+  <div class="crown-wrap">
+    <div class="crown-btn" id="crown-btn" onclick="toggleCrown()">👑</div>
+    <div class="crown-popup" id="crown-popup">
+      <div class="popup-label">✦ Tentang Website</div>
+      <div class="owner-row">
+        <div class="o-avatar claude">🤖</div>
+        <div><div class="o-name">Claude</div><div class="o-role">AI Developer</div></div>
+      </div>
+      <div class="owner-row">
+        <div class="o-avatar kitsune">🦊</div>
+        <div><div class="o-name">Kitsune_Lucky18</div><div class="o-role">Owner &amp; Creator</div></div>
+      </div>
+      <div class="popup-div"></div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;text-align:center;">Tonton konten Roblox di YouTube!</div>
+      <a class="yt-btn" href="https://youtube.com/@Kitsune_Lucky18" target="_blank">
+        <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="white"><path d="M23.5 6.2s-.3-2-1.2-2.8c-1.1-1.2-2.4-1.2-3-1.3C16.6 2 12 2 12 2s-4.6 0-7.3.1c-.6.1-1.9.1-3 1.3C.8 4.2.5 6.2.5 6.2S.2 8.5.2 10.8v2.1c0 2.3.3 4.6.3 4.6s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C7.2 21.7 12 21.8 12 21.8s4.6 0 7.3-.2c.6-.1 1.9-.1 3-1.3.9-.8 1.2-2.8 1.2-2.8s.3-2.3.3-4.6v-2.1C23.8 8.5 23.5 6.2 23.5 6.2zM9.7 15.5V8.4l8.1 3.6-8.1 3.5z"/></svg>
+        @Kitsune_Lucky18
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL -->
+<div class="panel" id="side-panel">
+  <div class="panel-header">
+    <span class="panel-title" id="panel-title">Panel</span>
+    <span class="panel-close" onclick="closePanel()">✕</span>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <header>
+    <div class="logo">🤖</div>
+    <div class="header-info">
+      <h1 id="ai-name-display">RoboScript AI</h1>
+      <p>by Kitsune_Lucky18 • Asisten Roblox Studio</p>
+    </div>
+    <div class="status-badge"><div class="status-dot"></div>Online</div>
+  </header>
+
+  <div id="chat-area"></div>
+
+  <div class="confirm-bar" id="confirm-bar">
+    ⚠️ Hapus semua chat dan mulai baru?
+    <button class="confirm-yes" onclick="confirmNewChat()">Ya, hapus</button>
+    <button class="confirm-no" onclick="cancelNewChat()">Batal</button>
+  </div>
+
+  <div class="quick-btns">
+    <button class="quick-btn" onclick="quickAsk('Cara membuat leaderboard di Roblox?')">🏆 Leaderboard</button>
+    <button class="quick-btn" onclick="quickAsk('Cara membuat toko dengan GUI di Roblox?')">🛒 Toko GUI</button>
+    <button class="quick-btn" onclick="quickAsk('Cara spawn player di lokasi tertentu?')">📍 Spawn Point</button>
+    <button class="quick-btn" onclick="quickAsk('Contoh script teleport antar place?')">🌀 Teleport</button>
+    <button class="quick-btn" onclick="quickAsk('Cara menyimpan data player dengan DataStore?')">💾 DataStore</button>
+    <button class="quick-btn" onclick="quickAsk('Cara membuat sistem nyawa/health bar?')">❤️ Health Bar</button>
+  </div>
+
+  <div class="input-area">
+    <div class="img-preview-bar" id="img-preview-bar">
+      <img class="img-thumb" id="img-thumb" src="" alt="preview"/>
+      <span style="font-size:12px;color:var(--muted);flex:1;">Foto siap dikirim</span>
+      <button class="img-remove" onclick="removeImage()">✕ Hapus</button>
+    </div>
+    <div class="input-row">
+      <div class="input-wrap">
+        <textarea id="user-input" placeholder="Tanya tentang Roblox Studio, atau upload screenshot script..." rows="1"
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      </div>
+      <button class="upload-btn" onclick="document.getElementById('file-input').click()" title="Upload foto">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </button>
+      <input type="file" id="file-input" accept="image/*" style="display:none" onchange="handleImageUpload(event)"/>
+      <button id="send-btn" onclick="sendMessage()">&#10148;</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  ⬇️ GANTI URL INI SETELAH DEPLOY CLOUDFLARE WORKER ⬇️
+//  Contoh: "https://roboscript.USERNAME.workers.dev"
+// ============================================================
+const WORKER_URL = "https://asistent-roblox-st.ppkrisna4.workers.dev";
+// ============================================================
+
+const STORAGE_HISTORY = 'roboscript_history_v2';
+const STORAGE_AI_NAME = 'roboscript_ainame';
+const STORAGE_THEME   = 'roboscript_theme';
+
+let isLoading = false;
+let history = [];
+let aiName = localStorage.getItem(STORAGE_AI_NAME) || 'RoboScript AI';
+let currentPanel = null;
+let pendingImageBase64 = null;
+let pendingImageType = null;
+
+const chatArea = document.getElementById('chat-area');
+const input    = document.getElementById('user-input');
+const sendBtn  = document.getElementById('send-btn');
+
+// ─── INIT ───
+function init() {
+  if (localStorage.getItem(STORAGE_THEME) === 'light') document.body.classList.add('light');
+  document.getElementById('ai-name-display').textContent = aiName;
+  loadHistory();
+}
+
+// ─── THEME ───
+function toggleTheme() {
+  document.body.classList.toggle('light');
+  localStorage.setItem(STORAGE_THEME, document.body.classList.contains('light') ? 'light' : 'dark');
+  document.getElementById('icon-theme').classList.toggle('active', document.body.classList.contains('light'));
+}
+
+// ─── HISTORY ───
+function saveHistoryToStorage() {
+  const toSave = history.map(m => {
+    if (Array.isArray(m.content)) {
+      const txt = m.content.filter(b => b.type==='text').map(b=>b.text).join('\n');
+      return { role: m.role, content: txt };
+    }
+    return m;
+  });
+  try { localStorage.setItem(STORAGE_HISTORY, JSON.stringify(toSave)); } catch(e) {}
+}
+function loadHistory() {
+  try {
+    const saved = localStorage.getItem(STORAGE_HISTORY);
+    if (saved) {
+      history = JSON.parse(saved);
+      if (history.length > 0) {
+        const notice = document.createElement('div');
+        notice.style.cssText = 'text-align:center;font-size:11px;color:var(--muted);padding:6px 0;';
+        notice.textContent = '— Percakapan sebelumnya dipulihkan —';
+        chatArea.appendChild(notice);
+        history.forEach(m => addMessageToDOM(m.role, m.role==='ai' ? formatMessage(m.content) : escHtml(m.content), true));
+        return;
+      }
+    }
+  } catch(e) {}
+  addMessageToDOM('ai', `Halo! Saya <b>${aiName}</b> — asisten Roblox Studio gratis buat semua developer! 🎮🦊<br><br>Dibuat oleh <b>Kitsune_Lucky18</b> biar semua orang bisa belajar Roblox dengan mudah!<br><br>Saya bisa bantu:<br>• Script Lua, LocalScript, ModuleScript<br>• RemoteEvent, GUI, DataStore<br>• Upload screenshot script → langsung dibenerin!<br><br>Mau tanya apa? 😊`, true);
+}
+
+// ─── NEW CHAT ───
+function newChat() { document.getElementById('confirm-bar').classList.add('show'); }
+function confirmNewChat() {
+  history = [];
+  localStorage.removeItem(STORAGE_HISTORY);
+  chatArea.innerHTML = '';
+  addMessageToDOM('ai', 'Chat baru! Halo lagi! 🎮 Mau tanya apa tentang Roblox Studio?', true);
+  document.getElementById('confirm-bar').classList.remove('show');
+}
+function cancelNewChat() { document.getElementById('confirm-bar').classList.remove('show'); }
+function focusChat() { input.focus(); }
+
+// ─── IMAGE ───
+function handleImageUpload(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    pendingImageBase64 = ev.target.result.split(',')[1];
+    pendingImageType = file.type || 'image/png';
+    document.getElementById('img-thumb').src = ev.target.result;
+    document.getElementById('img-preview-bar').classList.add('show');
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+function removeImage() {
+  pendingImageBase64 = null; pendingImageType = null;
+  document.getElementById('img-preview-bar').classList.remove('show');
+  document.getElementById('img-thumb').src = '';
+}
+
+// ─── PANEL ───
+function togglePanel(name) {
+  const iconMap = {search:'icon-search',toolbox:'icon-toolbox',history:'icon-history',settings:'icon-settings'};
+  const panel = document.getElementById('side-panel');
+  if (currentPanel === name) { closePanel(); return; }
+  Object.values(iconMap).forEach(id => document.getElementById(id).classList.remove('active'));
+  currentPanel = name;
+  document.getElementById(iconMap[name]).classList.add('active');
+  const configs = {
+    search:  {title:'🔍 Cari Chat',   fn:renderSearch},
+    toolbox: {title:'🧰 Toolbox Lua', fn:renderToolbox},
+    history: {title:'📋 Riwayat',     fn:renderHistoryPanel},
+    settings:{title:'⚙️ Pengaturan',  fn:renderSettings},
+  };
+  document.getElementById('panel-title').textContent = configs[name].title;
+  configs[name].fn();
+  panel.classList.add('open');
+}
+function closePanel() {
+  document.getElementById('side-panel').classList.remove('open');
+  ['icon-search','icon-toolbox','icon-history','icon-settings'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  currentPanel = null;
+}
+
+// ─── SEARCH ───
+function renderSearch() {
+  document.getElementById('panel-body').innerHTML = `
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+      <input class="search-input" id="search-q" placeholder="Ketik kata kunci..." oninput="doSearch()"/>
+    </div>
+    <div id="search-results"><div class="search-empty">Ketik untuk mencari</div></div>`;
+  setTimeout(()=>document.getElementById('search-q')?.focus(),100);
+}
+function doSearch() {
+  const q = document.getElementById('search-q').value.toLowerCase().trim();
+  const results = document.getElementById('search-results');
+  if (!q) { results.innerHTML='<div class="search-empty">Ketik untuk mencari</div>'; return; }
+  const matches = history.filter(m=>typeof m.content==='string'&&m.content.toLowerCase().includes(q));
+  results.innerHTML = matches.length
+    ? matches.map(m=>`<div class="search-result"><div class="search-result-role">${m.role==='user'?'👤 Kamu':'🤖 AI'}</div><div class="search-result-text">${m.content.substring(0,80)}</div></div>`).join('')
+    : '<div class="search-empty">Tidak ditemukan 😕</div>';
+}
+
+// ─── TOOLBOX ───
+const snippets = [
+  {name:'👤 Player Added',desc:'Event saat player masuk',code:`game.Players.PlayerAdded:Connect(function(player)\n  print(player.Name .. " masuk!")\nend)`},
+  {name:'🏆 Leaderboard',desc:'Buat coins/XP di leaderboard',code:`game.Players.PlayerAdded:Connect(function(player)\n  local stats = Instance.new("Folder")\n  stats.Name = "leaderstats"\n  stats.Parent = player\n  local coins = Instance.new("IntValue")\n  coins.Name = "Coins"\n  coins.Value = 0\n  coins.Parent = stats\nend)`},
+  {name:'💾 DataStore',desc:'Simpan & load data player',code:`local DS = game:GetService("DataStoreService")\nlocal store = DS:GetDataStore("Data")\ngame.Players.PlayerAdded:Connect(function(p)\n  local ok, val = pcall(function()\n    return store:GetAsync(p.UserId)\n  end)\n  -- pakai val di sini\nend)\ngame.Players.PlayerRemoving:Connect(function(p)\n  pcall(function()\n    store:SetAsync(p.UserId, 0)\n  end)\nend)`},
+  {name:'📡 RemoteEvent',desc:'Kirim data server ke client',code:`-- SERVER\nlocal re = game.ReplicatedStorage:WaitForChild("RemoteEvent")\nre:FireClient(player, "Halo!")\n-- CLIENT\nlocal re = game.ReplicatedStorage:WaitForChild("RemoteEvent")\nre.OnClientEvent:Connect(function(msg)\n  print(msg)\nend)`},
+  {name:'🖼️ GUI Button',desc:'Tombol yang bisa diklik',code:`local btn = script.Parent\nbtn.MouseButton1Click:Connect(function()\n  print("Diklik!")\nend)`},
+  {name:'💥 Damage',desc:'Kurangi health player',code:`local function damage(player, amount)\n  local char = player.Character\n  if char then\n    local hum = char:FindFirstChild("Humanoid")\n    if hum then hum.Health -= amount end\n  end\nend`},
+  {name:'🌀 Teleport',desc:'Pindahkan player ke posisi',code:`local function teleport(player, pos)\n  local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")\n  if hrp then hrp.CFrame = CFrame.new(pos) end\nend`},
+  {name:'⏱️ Cooldown',desc:'Cegah spam klik tombol',code:`local cooldowns = {}\nlocal COOLDOWN = 3 -- detik\n\ngame.Players.PlayerAdded:Connect(function(p)\n  cooldowns[p] = 0\nend)\n\nlocal function canUse(player)\n  local now = tick()\n  if now - (cooldowns[player] or 0) >= COOLDOWN then\n    cooldowns[player] = now\n    return true\n  end\n  return false\nend`},
+];
+function renderToolbox() {
+  document.getElementById('panel-body').innerHTML = snippets.map((s,i)=>
+    `<div class="tool-item" onclick="insertSnippet(${i})"><div class="tool-item-name">${s.name}</div><div class="tool-item-desc">${s.desc}</div></div>`
+  ).join('');
+}
+function insertSnippet(i) {
+  input.value = `Tolong jelaskan snippet ini:\n\`\`\`lua\n${snippets[i].code}\n\`\`\``;
+  autoResize(input); input.focus(); closePanel();
+}
+
+// ─── HISTORY PANEL ───
+function renderHistoryPanel() {
+  const msgs = history.filter(m=>m.role==='user');
+  document.getElementById('panel-body').innerHTML = msgs.length
+    ? msgs.map((m,i)=>`<div class="hist-item"><div class="hist-label">💬 ${(typeof m.content==='string'?m.content:'[gambar]').substring(0,55)}</div><div class="hist-time">Pesan #${i+1}</div></div>`).join('')
+    : '<div class="hist-empty">Belum ada riwayat 💬</div>';
+}
+
+// ─── SETTINGS ───
+function renderSettings() {
+  document.getElementById('panel-body').innerHTML = `
+    <div class="setting-row">
+      <div class="setting-label">Nama AI</div>
+      <input style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px 10px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;" id="set-name" value="${aiName}" placeholder="Nama AI..."/>
+    </div>
+    <button class="setting-btn" onclick="saveSettings()">💾 Simpan</button>
+    <div style="margin-top:16px;">
+      <div class="setting-label">Hapus Riwayat</div>
+      <button class="setting-btn danger" onclick="confirmNewChat();closePanel();">🗑️ Hapus Semua Chat</button>
+    </div>`;
+}
+function saveSettings() {
+  const name = document.getElementById('set-name').value.trim();
+  if (name) { aiName = name; localStorage.setItem(STORAGE_AI_NAME, name); document.getElementById('ai-name-display').textContent = name; }
+  closePanel();
+  addMessageToDOM('ai', `Pengaturan disimpan! Nama AI sekarang: <b>${aiName}</b> 🎉`, true);
+}
+
+// ─── CROWN ───
+function toggleCrown() { document.getElementById('crown-popup').classList.toggle('show'); }
+document.addEventListener('click', e => {
+  const btn = document.getElementById('crown-btn'), popup = document.getElementById('crown-popup');
+  if (btn && popup && !btn.contains(e.target) && !popup.contains(e.target)) popup.classList.remove('show');
+});
+
+// ─── HELPERS ───
+function escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function formatMessage(text) {
+  return text.split(/(```(?:lua)?\n?[\s\S]*?```)/g).map(part => {
+    if (part.startsWith('```')) {
+      const code = part.replace(/```(?:lua)?\n?/,'').replace(/```$/,'');
+      const esc = code.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n');
+      return `<pre><button class="copy-btn" onclick="copyCode('${esc}')">Copy</button>${escHtml(code)}</pre>`;
+    }
+    return escHtml(part).replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
+  }).join('');
+}
+function copyCode(code) {
+  navigator.clipboard.writeText(code.replace(/\\n/g,'\n').replace(/\\'/g,"'").replace(/\\\\/g,'\\'));
+}
+function addMessageToDOM(role, html, isHtml) {
+  const div = document.createElement('div'); div.className = `msg ${role}`;
+  const av = document.createElement('div'); av.className = 'avatar'; av.textContent = role==='ai'?'🤖':'👤';
+  const bub = document.createElement('div'); bub.className = 'bubble';
+  if (isHtml) bub.innerHTML = html; else bub.textContent = html;
+  div.appendChild(av); div.appendChild(bub);
+  chatArea.appendChild(div); chatArea.scrollTop = chatArea.scrollHeight;
+}
+function addTyping() {
+  const div = document.createElement('div'); div.className='msg ai'; div.id='typing-msg';
+  div.innerHTML=`<div class="avatar">🤖</div><div class="bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div>`;
+  chatArea.appendChild(div); chatArea.scrollTop=chatArea.scrollHeight;
+}
+function removeTyping() { document.getElementById('typing-msg')?.remove(); }
+function quickAsk(t) { if (!isLoading) { input.value=t; sendMessage(); } }
+function handleKey(e) { if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
+
+// ─── SEND ───
+function getSystemPrompt() {
+  return `Kamu adalah ${aiName}, asisten ahli Roblox Studio yang dibuat oleh Kitsune_Lucky18 untuk membantu semua developer Roblox Indonesia secara gratis. Kamu sangat mahir dalam Lua scripting, RemoteEvent, GUI, DataStore, animasi, dan debugging. Jika ada screenshot script, analisis dan langsung berikan solusi. Jawab dengan bahasa Indonesia yang santai, ramah, dan mudah dipahami. Selalu sertakan contoh kode Lua dalam blok \`\`\`lua jika relevan.`;
+}
+
+async function sendMessage() {
+  const text = input.value.trim();
+  if ((!text && !pendingImageBase64) || isLoading) return;
+
+  // Cek apakah Worker URL sudah diisi
+  if (WORKER_URL === "GANTI_DENGAN_URL_WORKER_KAMU") {
+    addMessageToDOM('ai', '⚠️ Worker URL belum diisi! Ikuti panduan setup di README ya.', false);
+    return;
+  }
+
+  isLoading = true; sendBtn.disabled = true;
+  input.value = ''; input.style.height = 'auto';
+
+  let userContent, userHtml = '';
+  if (pendingImageBase64) {
+    const src = document.getElementById('img-thumb').src;
+    userContent = [{ type:'image', source:{ type:'base64', media_type:pendingImageType, data:pendingImageBase64 } }];
+    if (text) { userContent.push({ type:'text', text }); userHtml = escHtml(text); }
+    else { userHtml = 'Tolong cek dan benerin script di screenshot ini!'; }
+    userHtml += `<br><img class="uploaded-img" src="${src}" alt="screenshot"/>`;
+    removeImage();
+  } else {
+    userContent = text;
+    userHtml = escHtml(text);
+  }
+
+  addMessageToDOM('user', userHtml, true);
+  history.push({ role:'user', content:userContent });
+  addTyping();
+
+  try {
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        system: getSystemPrompt(),
+        messages: history
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const reply = data.content?.[0]?.text || 'Maaf tidak ada respons.';
+    removeTyping();
+    addMessageToDOM('ai', formatMessage(reply), true);
+    history.push({ role:'assistant', content:reply });
+    saveHistoryToStorage();
+  } catch(err) {
+    removeTyping();
+    addMessageToDOM('ai', '❌ Gagal konek ke server. Pastiin Worker sudah di-deploy ya!', false);
+    history.pop();
+  }
+
+  isLoading = false; sendBtn.disabled = false; input.focus();
+}
+
+init();
+</script>
+</body>
+</html>
